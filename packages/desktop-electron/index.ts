@@ -36,6 +36,7 @@ import type {
 import { openExternalUrl, revealLocalFile } from './external-links';
 import { getMenu } from './menu';
 import { retry as promiseRetry } from './retry';
+import { writeSaveFile } from './save-file';
 import type { AppInitFailurePayload } from './server';
 import { isInternalUrl } from './trusted-url';
 import {
@@ -820,19 +821,11 @@ ipcMain.handle(
     { title, defaultPath, fileContents }: SaveFileDialogPayload,
   ) => {
     const fileLocation = await dialog.showSaveDialog({ title, defaultPath });
+    if (fileLocation.canceled || !fileLocation.filePath) {
+      return;
+    }
 
-    return new Promise<void>((resolve, reject) => {
-      if (fileLocation) {
-        const contents =
-          typeof fileContents === 'string'
-            ? fileContents
-            : new Uint8Array(fileContents.buffer);
-        fs.writeFile(fileLocation.filePath, contents, error => {
-          return reject(error);
-        });
-      }
-      resolve();
-    });
+    await writeSaveFile(fileLocation.filePath, fileContents);
   },
 );
 
